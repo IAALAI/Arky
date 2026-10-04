@@ -22,10 +22,11 @@ router = APIRouter()
 async def account_login(request: Request):
     request_json = await request.json()
     token = request_json["token"]
+    player_data = await PlayerData.create(player_id=token)
 
     response = {
         "result": 0,
-        "uid": "123456789",
+        "uid": str(player_data["status"]["uid"]),
         "secret": token,
         "serviceLicenseVersion": 0,
         "majorVersion": "354",

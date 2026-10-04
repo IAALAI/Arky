@@ -26,12 +26,17 @@ class Manufacture:
 
     def update(self, slot_id):
         room, phase = self.room(slot_id)
+        # The upstream sandbox disabled manufacture with a -100% speed bonus.
+        # Our base-rate engine must publish matching client-visible run metadata.
+        room.setdefault("buff", {})["speed"] = 0
+        room["display"] = {"base": 0, "buff": 0}
         formula = self.table["manufactFormulas"].get(room["formulaId"])
         last = max(0, int(room["lastUpdateTime"]))
         now = max(last, self.now)  # A backwards clock must never grant duplicate production.
         room["lastUpdateTime"] = now
         if not formula or room["remainSolutionCnt"] <= 0:
             room["completeWorkTime"] = -1
+            room["state"] = 0
             return
         cost = integer(formula["costPoint"], "formula time", 1)
         weight = integer(formula["weight"], "formula weight", 1)
@@ -54,6 +59,7 @@ class Manufacture:
         room["remainSolutionCnt"] -= produced
         progress -= produced * cost
         blocked = room["remainSolutionCnt"] == 0 or produced == free or produced == affordable
+        room["state"] = 0 if blocked else 1
         room["processPoint"] = 0 if blocked else progress
         room["completeWorkTime"] = -1 if blocked else now + ceil((cost - progress) / speed)
 

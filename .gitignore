@@ -187,3 +187,5 @@ pyrightconfig.json
 
 /test/migration-backups/
 /test/runtime/
+
+/test/client/

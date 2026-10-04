@@ -80,3 +80,14 @@ def test_clock_rollback_cannot_duplicate_production(setup):
     Manufacture(user, table, 100).sync()
     Manufacture(user, table, 2800).sync()
     assert room["outputSolutionCnt"] == 1
+
+
+def test_client_metadata_matches_base_rate_and_queue_state(setup):
+    table, user = setup
+    room = start(table, user, count=1)
+    assert room["state"] == 1
+    assert room["buff"]["speed"] == 0
+    assert room["display"] == {"base": 0, "buff": 0}
+    Manufacture(user, table, 2800).sync()
+    assert room["state"] == 0
+    assert room["outputSolutionCnt"] == 1

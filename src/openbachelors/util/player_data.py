@@ -929,6 +929,11 @@ def recursive_flush_deleted_dict(
             if key not in delta_json.modified_dict:
                 deleted_keys.append(key)
                 del overlay_json[key]
+            elif isinstance(delta_json.modified_dict[key], dict) and key in overlay_json:
+                # An explicit delete followed by a dict assignment replaces that
+                # subtree. Merging it would resurrect template-owned operators.
+                deleted_keys.append(key)
+                del overlay_json[key]
             del delta_json.deleted_dict[key]
 
     # Always visit surviving siblings, including when this level deleted a key.

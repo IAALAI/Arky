@@ -1,3 +1,5 @@
+> spark 安卓环境请先阅读 [README.spark.md](README.spark.md)。本目录是唯一主服务，旧端已归档。
+
 # OpenBachelorS
 
 OpenBachelor Server. For PvZ Online.

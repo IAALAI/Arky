@@ -70,6 +70,14 @@ def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "status"
     if action not in {"start", "stop", "restart", "status"}:
         raise SystemExit("usage: candidate.py [start|stop|restart|status]")
+    unit = Path("/etc/systemd/system/arknights.service")
+    if unit.exists() and str(ROOT) in unit.read_text():
+        if action == "status":
+            subprocess.run(["systemctl", "show", "arknights.service", "-p", "ActiveState", "-p", "MainPID"], check=True)
+        else:
+            # Delegate to the installed supervisor instead of creating a second worker.
+            subprocess.run(["sudo", "systemctl", action, "arknights.service"], check=True)
+        return
     with (REPORTS / "candidate-control.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if action in {"stop", "restart"}:

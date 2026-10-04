@@ -1,6 +1,6 @@
 {
-    "host": "127.0.0.1",
-    "port": 8443,
+    "host": "192.168.240.1",
+    "port": 80,
     "use_db": false,
     "db_url": "postgresql://postgres:123456@127.0.0.1:5432",
     "adaptive": true,

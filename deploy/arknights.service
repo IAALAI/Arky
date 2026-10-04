@@ -1,0 +1,18 @@
+[Unit]
+Description=Arknights ARM Android local server
+After=network.target
+
+[Service]
+Type=simple
+User=iaalai
+Group=iaalai
+WorkingDirectory=/home/iaalai/player/Ark/newVersion/native
+Environment=PYTHONPATH=/home/iaalai/player/Ark/newVersion/native/src
+ExecStart=/home/iaalai/player/Ark/newVersion/native/.venv/bin/python -m uvicorn openbachelors.app:app --host 127.0.0.1 --port 18443 --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=3
+UMask=0077
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,7 @@ import zipfile
 import subprocess
 from uuid import uuid4
 import re
-from hashlib import md5
+from hashlib import md5, sha256
 import random
 import asyncio
 import urllib.parse
@@ -22,7 +22,7 @@ from Crypto.Util.Padding import unpad
 import aiofiles
 import httpx
 
-from ..const.filepath import TMP_DIRPATH
+from ..const.filepath import TMP_DIRPATH, MULTI_USER_SAV_DIRPATH
 from ..const.region import GAME_REGION, GameRegion
 
 
@@ -42,7 +42,16 @@ def get_char_id_from_skin_id(skin_id: str) -> str:
 MAX_USERNAME_LENGTH = 64
 
 
+@functools.lru_cache(maxsize=1)
+def get_session_aliases():
+    path = Path(MULTI_USER_SAV_DIRPATH) / "session_aliases.json"
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
 def get_username_by_token(token: str) -> str:
+    alias = get_session_aliases().get(sha256(token.encode()).hexdigest())
+    if alias is not None:
+        return alias
     return urllib.parse.quote(token, safe="")[:MAX_USERNAME_LENGTH]
 
 
