@@ -1,0 +1,192 @@
+import requests
+import json
+from urllib.parse import urlparse
+from pathlib import Path
+
+from ..const.filepath import (
+    GAME_LINK_FILEPATH,
+    PC_GAME_LINK_FILEPATH,
+    MUMU_LINK_FILEPATH,
+    MUMU_15_LINK_FILEPATH,
+    LD_LINK_FILEPATH,
+    PC_GAME_EN_LINK_FILEPATH,
+)
+from ..util.helper import get_en_launcher_header
+
+REQUESTS_TIMEOUT = 60
+
+
+def get_game_link():
+    try:
+        req = requests.get(
+            "https://ak.hypergryph.com/downloads/android_lastest",
+            timeout=REQUESTS_TIMEOUT,
+            allow_redirects=True,
+            stream=True,
+        )
+        game_link = req.url
+
+        if game_link.endswith(".apk"):
+            return game_link
+
+        return None
+    except Exception:
+        return None
+
+
+def get_mumu_link():
+    try:
+        mumu_link = requests.post(
+            "https://api.mumuglobal.com/api/v1/download/nx",
+            timeout=REQUESTS_TIMEOUT,
+            data=[
+                ("architecture", "x86_64"),
+                ("machine", "{}"),
+                ("usage", "1"),
+            ],
+        ).json()["data"]["mumu"]["link"]
+
+        mumu_link = mumu_link.replace("http://", "https://", 1)
+        return mumu_link
+    except Exception:
+        return None
+
+
+def get_mumu_15_link():
+    try:
+        mumu_15_obj = requests.post(
+            "https://api.mumuglobal.com/api/v2/download/nx",
+            timeout=REQUESTS_TIMEOUT,
+            data=[
+                ("architecture", "x86_64"),
+                ("machine", "{}"),
+                ("usage", "1"),
+                ("channel", "gw-overseas12"),
+            ],
+        ).json()
+
+        mumu_15_link = "\n".join(
+            [
+                i["link"].replace("http://", "https://", 1)
+                for i in mumu_15_obj["data"]["components"]
+            ]
+        )
+        return mumu_15_link
+    except Exception:
+        return None
+
+
+def get_ld_link():
+    try:
+        ld_link = requests.get(
+            "https://files.ldrescdn.com/player_files/en/leidian",
+            timeout=REQUESTS_TIMEOUT,
+        ).json()["mnq14"]["url"]
+
+        return ld_link
+    except Exception:
+        return None
+
+
+def get_pc_game_link():
+    try:
+        obj = requests.get(
+            "https://launcher.hypergryph.com/api/game/get_latest?appcode=GzD1CpaWgmSq1wew&platform=Windows&channel=1",
+            timeout=REQUESTS_TIMEOUT,
+        ).json()
+
+        pc_game_link = "\n".join([i["url"] for i in obj["pkg"]["packs"]])
+
+        return pc_game_link
+    except Exception:
+        return None
+
+
+def get_pc_game_en_link():
+    try:
+        obj = requests.get(
+            "https://api-launcher-en.yo-star.com/api/launcher/game/config",
+            headers=get_en_launcher_header(),
+            timeout=REQUESTS_TIMEOUT,
+        ).json()
+
+        version = obj["data"]["game_latest_version"]
+        file_path = obj["data"]["game_latest_file_path"]
+
+        obj = requests.get(
+            "https://api-launcher-en.yo-star.com/api/launcher/game/config/json",
+            params={
+                "version": version,
+                "file_path": file_path,
+            },
+            headers=get_en_launcher_header(),
+            timeout=REQUESTS_TIMEOUT,
+        ).json()
+
+        url = obj["data"]["url"]
+
+        obj = requests.get(
+            url,
+            timeout=REQUESTS_TIMEOUT,
+        ).json()
+
+        source = obj["source"]
+
+        link_lst = []
+
+        for i in obj["file"]:
+            link_lst.append(
+                f"https://launcher-pkg-ark-en.yo-star.com{source}{i['path']}"
+            )
+
+        result_lst = []
+
+        for link in link_lst:
+            dirpath = Path(urlparse(link).path.lstrip("/")).parent.as_posix()
+            result_lst.append(f"{link}\n  dir={dirpath}")
+
+        return "\n".join(result_lst)
+    except Exception:
+        return None
+
+
+def main():
+    game_link = get_game_link()
+
+    if game_link is not None:
+        with open(GAME_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(game_link)
+
+    pc_game_link = get_pc_game_link()
+
+    if pc_game_link is not None:
+        with open(PC_GAME_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(pc_game_link)
+
+    mumu_link = get_mumu_link()
+
+    if mumu_link is not None:
+        with open(MUMU_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(mumu_link)
+
+    mumu_15_link = get_mumu_15_link()
+
+    if mumu_15_link is not None:
+        with open(MUMU_15_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(mumu_15_link)
+
+    ld_link = get_ld_link()
+
+    if ld_link is not None:
+        with open(LD_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(ld_link)
+
+    pc_game_en_link = get_pc_game_en_link()
+
+    if pc_game_en_link is not None:
+        with open(PC_GAME_EN_LINK_FILEPATH, "w", encoding="utf-8") as f:
+            f.write(pc_game_en_link)
+
+
+if __name__ == "__main__":
+    main()
