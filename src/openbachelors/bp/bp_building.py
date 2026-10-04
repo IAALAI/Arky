@@ -1,5 +1,10 @@
 from fastapi import APIRouter
-from fastapi import Request
+from fastapi import Request, HTTPException
+
+from ..util.manufacture import Manufacture
+from ..util.building_staff import BuildingStaff
+from ..util.faketime import faketime
+from ..const.filepath import RES_EXCEL_DIRPATH
 
 from ..const.json_const import true, false, null
 from ..const.filepath import CONFIG_JSON, VERSION_JSON
@@ -12,9 +17,37 @@ router = APIRouter()
 @router.post("/building/sync")
 @player_data_decorator
 async def building_sync(player_data, request: Request):
-    request_json = await request.json()
-    response = {}
+    return _base_action(player_data, {}, "sync")
+
+
+def _base_action(player_data, body, action):
+    # Mutate detached documents and commit only after the complete operation succeeds.
+    user = {"building": player_data["building"].copy(), "inventory": player_data["inventory"].copy()}
+    table = const_json_loader[RES_EXCEL_DIRPATH + "building_data.json"].copy()
+    try:
+        if action in {"assign", "assist"}:
+            user["troop"] = {"chars": player_data["troop"]["chars"].copy()}
+            engine = BuildingStaff(user, table, faketime())
+        else:
+            engine = Manufacture(user, table, faketime())
+        response = engine.sync() if action == "sync" else getattr(engine, action)(body)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    player_data["building"] = user["building"]
+    player_data["inventory"] = user["inventory"]
     return response
+
+
+@router.post("/building/changeManufactureSolution")
+@player_data_decorator
+async def building_changeManufactureSolution(player_data, request: Request):
+    return _base_action(player_data, await request.json(), "change")
+
+
+@router.post("/building/settleManufacture")
+@player_data_decorator
+async def building_settleManufacture(player_data, request: Request):
+    return _base_action(player_data, await request.json(), "settle")
 
 
 @router.post("/building/getRecentVisitors")
@@ -74,62 +107,13 @@ async def building_changeDiySolution(player_data, request: Request):
 @router.post("/building/setBuildingAssist")
 @player_data_decorator
 async def building_setBuildingAssist(player_data, request: Request):
-    request_json = await request.json()
-
-    char_num_id = request_json["charInstId"]
-    assist_idx = request_json["type"]
-
-    assist_lst = player_data["building"]["assist"].copy()
-    if char_num_id != -1:
-        for i in range(len(assist_lst)):
-            if assist_lst[i] == char_num_id:
-                assist_lst[i] = -1
-    assist_lst[assist_idx] = char_num_id
-    player_data["building"]["assist"] = assist_lst
-
-    response = {}
-    return response
+    return _base_action(player_data, await request.json(), "assist")
 
 
 @router.post("/building/assignChar")
 @player_data_decorator
 async def building_assignChar(player_data, request: Request):
-    request_json = await request.json()
-
-    room_id = request_json["roomSlotId"]
-    char_num_id_lst = request_json["charInstIdList"]
-
-    old_char_num_id_lst = player_data["building"]["roomSlots"][room_id][
-        "charInstIds"
-    ].copy()
-
-    for char_num_id in old_char_num_id_lst:
-        if char_num_id == -1:
-            continue
-        player_data["building"]["chars"][str(char_num_id)]["roomSlotId"] = ""
-        player_data["building"]["chars"][str(char_num_id)]["index"] = -1
-
-    for char_idx, char_num_id in enumerate(char_num_id_lst):
-        if char_num_id == -1:
-            continue
-        src_room_id = player_data["building"]["chars"][str(char_num_id)]["roomSlotId"]
-        if src_room_id:
-            src_char_idx = player_data["building"]["chars"][str(char_num_id)]["index"]
-
-            src_char_num_id_lst = player_data["building"]["roomSlots"][src_room_id][
-                "charInstIds"
-            ].copy()
-            src_char_num_id_lst[src_char_idx] = -1
-            player_data["building"]["roomSlots"][src_room_id]["charInstIds"] = (
-                src_char_num_id_lst
-            )
-        player_data["building"]["chars"][str(char_num_id)]["roomSlotId"] = room_id
-        player_data["building"]["chars"][str(char_num_id)]["index"] = char_idx
-
-    player_data["building"]["roomSlots"][room_id]["charInstIds"] = char_num_id_lst
-
-    response = {}
-    return response
+    return _base_action(player_data, await request.json(), "assign")
 
 
 @router.post("/building/getMessageBoardContent")

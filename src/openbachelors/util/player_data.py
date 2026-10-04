@@ -7,6 +7,7 @@ import inspect
 import asyncio
 import logging
 import time
+import weakref
 
 from psycopg.types.json import Json
 from fastapi import Response
@@ -922,37 +923,34 @@ def recursive_flush_deleted_dict(
     parent_hg_deleted_dict: dict,
     parent_key: str,
 ):
-    deleted_key_lst = []
-    internal_deleted_key_lst = []
-    for key, value in delta_json.deleted_dict.items():
+    deleted_keys = []
+    for key, value in list(delta_json.deleted_dict.items()):
         if not isinstance(value, dict):
             if key not in delta_json.modified_dict:
-                deleted_key_lst.append(key)
+                deleted_keys.append(key)
                 del overlay_json[key]
-            else:
-                internal_deleted_key_lst.append(key)
-
-    for key in internal_deleted_key_lst:
-        del delta_json.deleted_dict[key]
-
-    if deleted_key_lst:
-        parent_hg_deleted_dict[parent_key] = deleted_key_lst
-
-        for key in deleted_key_lst:
             del delta_json.deleted_dict[key]
-    else:
-        parent_hg_deleted_dict[parent_key] = {}
 
-        for key, value in delta_json.deleted_dict.items():
-            if key in overlay_json:
-                child_overlay_json = overlay_json[key]
-                child_delta_json = delta_json.get_child_delta_json(key)
-                recursive_flush_deleted_dict(
-                    child_overlay_json,
-                    child_delta_json,
-                    parent_hg_deleted_dict[parent_key],
-                    key,
-                )
+    # Always visit surviving siblings, including when this level deleted a key.
+    # Otherwise replacement markers remain pending and hide successfully saved values.
+    nested = {}
+    for key in list(delta_json.deleted_dict):
+        if key in overlay_json:
+            recursive_flush_deleted_dict(
+                overlay_json[key], delta_json.get_child_delta_json(key), nested, key
+            )
+    recursive_collapse_deleted_dict(nested)
+
+    if deleted_keys:
+        # The client deletion format cannot mix a list and child maps at one level.
+        # Replace any surviving sibling with nested deletions using its full new value.
+        for key in nested:
+            child = OverlayJson(overlay_json[key], delta_json.get_child_delta_json(key))
+            delta_json.modified_dict[key] = child.copy()
+            deleted_keys.append(key)
+        parent_hg_deleted_dict[parent_key] = deleted_keys
+    else:
+        parent_hg_deleted_dict[parent_key] = nested
 
 
 def recursive_collapse_deleted_dict(target_dict: dict):
@@ -1273,6 +1271,26 @@ def handle_message(player_data, json_response):
             break
 
 
+
+_player_locks = weakref.WeakValueDictionary()
+
+
+def serialized_player(func):
+    """Serialize one local player's read/modify/save cycle within a single worker."""
+    @wraps(func)
+    async def serialized(*args, **kwargs):
+        request = kwargs.get("request")
+        token = request.headers.get("secret", PlayerData.DEFAULT_TOKEN) if request is not None else PlayerData.DEFAULT_TOKEN
+        key = get_username_by_token(token) if const_json_loader[CONFIG_JSON]["multi_user"] else "_"
+        lock = _player_locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            _player_locks[key] = lock
+        async with lock:
+            return await func(*args, **kwargs)
+    return serialized
+
+
 def player_data_decorator(func):
     func_sig = inspect.signature(func)
     func_param_lst = [
@@ -1305,4 +1323,4 @@ def player_data_decorator(func):
 
     wrapper.__signature__ = func_sig.replace(parameters=func_param_lst)
 
-    return wrapper
+    return serialized_player(wrapper)

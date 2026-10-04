@@ -133,8 +133,22 @@ async def save_delta_json_obj(path: str, modified: dict, deleted: dict):
     dirpath = os.path.dirname(path)
     os.makedirs(dirpath, exist_ok=True)
     json_obj = {"modified": modified, "deleted": deleted}
-    async with aiofiles.open(path, "w", encoding="utf-8") as f:
-        return await f.write(json.dumps(json_obj, indent=4, ensure_ascii=False))
+    # Publish a complete JSON document on the same filesystem.
+    import tempfile
+    import asyncio
+    def write_atomic():
+        fd, temporary = tempfile.mkstemp(prefix=".save-", dir=dirpath)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                written = handle.write(json.dumps(json_obj, indent=4, ensure_ascii=False))
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+            return written
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    return await asyncio.to_thread(write_atomic)
 
 
 def remove_aria2_tmpfile(tmp_filename):

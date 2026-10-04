@@ -8,9 +8,9 @@ import aiofiles
 import orjson
 
 from ..const.json_const import true, false, null
-from ..const.filepath import CONFIG_JSON, VERSION_JSON, TMP_DIRPATH
+from ..const.filepath import CONFIG_JSON, VERSION_JSON, TMP_DIRPATH, RLV2_TMPL_JSON
 from ..util.const_json_loader import const_json_loader
-from ..util.player_data import PlayerData, player_data_decorator
+from ..util.player_data import PlayerData, player_data_decorator, serialized_player
 from ..util.mail_helper import get_player_mailbox
 from ..util.faketime import faketime
 from ..util.log_helper import IS_DEBUG
@@ -35,8 +35,15 @@ async def account_login(request: Request):
 
 
 @router.post("/account/syncData")
+@serialized_player
 async def account_syncData(request: Request):
     player_data = await PlayerData.create(request=request)
+
+    # A copied legacy account keeps its owned items/operators and current run.
+    # Add only newly introduced roguelike topic metadata from the new template.
+    for theme, defaults in const_json_loader[RLV2_TMPL_JSON]["outer"]:
+        if theme not in player_data["rlv2"]["outer"]:
+            player_data["rlv2"]["outer"][theme] = defaults.copy()
 
     t = int(faketime())
     player_data["status"]["lastRefreshTs"] = t

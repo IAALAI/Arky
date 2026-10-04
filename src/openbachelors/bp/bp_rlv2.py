@@ -635,9 +635,13 @@ class Rlv2BasicManager:
 
         char_idx = 0
 
+        # Java saves use sequential instance IDs, unlike the upstream template's
+        # character-number IDs. Resolve ownership by charId and keep stored stats.
+        owned = {char["charId"]: char for _, char in self.player_data["troop"]["chars"]}
         for i, char_id in profession_char_id_lst_dict[profession]:
-            char_num_id = get_char_num_id(char_id)
-            char_obj = self.player_data["troop"]["chars"][str(char_num_id)].copy()
+            if char_id not in owned:
+                continue
+            char_obj = owned[char_id].copy()
 
             if upgrade_limited:
                 self.degrade_char_obj_if_necessary(char_obj)
