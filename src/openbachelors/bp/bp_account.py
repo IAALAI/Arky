@@ -46,6 +46,9 @@ async def account_syncData(request: Request):
         if theme not in player_data["rlv2"]["outer"]:
             player_data["rlv2"]["outer"][theme] = defaults.copy()
 
+    from ..services.base import execute_base
+    execute_base(player_data, "sync", {}, faketime())
+
     t = int(faketime())
     player_data["status"]["lastRefreshTs"] = t
 

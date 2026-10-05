@@ -66,7 +66,10 @@ async def lifespan(app: FastAPI):
     await httpx_client.aclose()
 
 
+from .protocol.capture import BuildingTrace
+
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(BuildingTrace)
 
 
 app.include_router(bp_account.router)

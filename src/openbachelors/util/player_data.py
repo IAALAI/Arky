@@ -984,12 +984,13 @@ class FileBasedDeltaJson(DeltaJson, SavableThing):
             modified_dict=json_obj["modified"], deleted_dict=json_obj["deleted"]
         )
 
+        delta_json.server_state = json_obj.get("server", {})
         delta_json.path = path
 
         return delta_json
 
     async def save(self):
-        await save_delta_json_obj(self.path, self.modified_dict, self.deleted_dict)
+        await save_delta_json_obj(self.path, self.modified_dict, self.deleted_dict, self.server_state)
 
 
 class DBBasedDeltaJson(DeltaJson, SavableThing):
@@ -1011,6 +1012,7 @@ class DBBasedDeltaJson(DeltaJson, SavableThing):
             modified_dict=json_obj["modified"], deleted_dict=json_obj["deleted"]
         )
 
+        delta_json.server_state = json_obj.get("server", {})
         delta_json.column_name = column_name
         delta_json.username = username
         delta_json.save_aggregator = save_aggregator
@@ -1035,6 +1037,7 @@ class DBBasedDeltaJson(DeltaJson, SavableThing):
             {
                 "modified": self.modified_dict,
                 "deleted": self.deleted_dict,
+                "server": self.server_state,
             }
         )
         if self.save_aggregator is not None:
@@ -1210,10 +1213,13 @@ class PlayerData(OverlayJson, SavableThing):
 
     def reset(self):
         self.sav_delta_json.reset()
+        self.sav_delta_json.server_state.clear()
         self.sav_pending_delta_json.reset()
         self.extra_save.reset()
 
     def reset_key(self, key):
+        if key=='building':
+            self.sav_delta_json.server_state.pop('base',None)
         self.sav_delta_json.reset_key(key)
         self.sav_pending_delta_json.reset_key(key)
 

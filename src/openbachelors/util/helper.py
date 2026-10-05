@@ -138,10 +138,12 @@ async def load_delta_json_obj(path: str):
         return json.loads(await f.read())
 
 
-async def save_delta_json_obj(path: str, modified: dict, deleted: dict):
+async def save_delta_json_obj(path: str, modified: dict, deleted: dict, server=None):
     dirpath = os.path.dirname(path)
     os.makedirs(dirpath, exist_ok=True)
     json_obj = {"modified": modified, "deleted": deleted}
+    if server is not None:
+        json_obj["server"] = server
     # Publish a complete JSON document on the same filesystem.
     import tempfile
     import asyncio

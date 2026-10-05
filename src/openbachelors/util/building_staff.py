@@ -1,7 +1,7 @@
 """Validate and update base staffing using owned troop instance IDs."""
 from .manufacture import integer
 
-STAFF_ROOMS = {"CONTROL", "POWER", "MANUFACTURE", "TRADING", "DORMITORY", "WORKSHOP", "MEETING", "HIRE"}
+STAFF_ROOMS = {"CONTROL", "POWER", "MANUFACTURE", "TRADING", "DORMITORY", "WORKSHOP", "MEETING", "HIRE", "TRAINING"}
 
 class BuildingStaff:
     def __init__(self, user, table, now):

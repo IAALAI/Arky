@@ -105,7 +105,7 @@ def test_manufacture_http_is_atomic_and_collection_is_idempotent(client):
         "roomSlotId": "slot_16", "targetFormulaId": "1", "solutionCount": 3})
     async def seed():
         player = await PlayerData.create(player_id=client.test_token)
-        player["building"]["rooms"]["MANUFACTURE"]["slot_16"]["lastUpdateTime"] = int(time.time()) - 5400
+        player.sav_delta_json.server_state["base"]["clock"] = int(time.time()) - 5400
         player.build_delta_response()
         await player.save()
     asyncio.run(seed())
@@ -174,7 +174,9 @@ def test_staffing_accepts_legacy_instance_ids_and_moves_operator(client):
     ("setBuildingAssist", {"type": 0, "charInstId": 99999999}),
 ])
 def test_invalid_staffing_is_rejected_without_mutation(client, route, body):
-    before = post(client, "/account/syncData")["user"]["building"]
+    post(client, "/account/syncData")
+    path = Path("multi_sav") / client.test_token / "delta.json"
+    before = path.read_bytes()
     response = client.post("/building/" + route, json=body)
     assert response.status_code == 400
-    assert post(client, "/account/syncData")["user"]["building"] == before
+    assert path.read_bytes() == before

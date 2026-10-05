@@ -1,8 +1,6 @@
 from fastapi import APIRouter
 from fastapi import Request, HTTPException
 
-from ..util.manufacture import Manufacture
-from ..util.building_staff import BuildingStaff
 from ..util.faketime import faketime
 from ..const.filepath import RES_EXCEL_DIRPATH
 
@@ -21,21 +19,12 @@ async def building_sync(player_data, request: Request):
 
 
 def _base_action(player_data, body, action):
-    # Mutate detached documents and commit only after the complete operation succeeds.
-    user = {"building": player_data["building"].copy(), "inventory": player_data["inventory"].copy()}
-    table = const_json_loader[RES_EXCEL_DIRPATH + "building_data.json"].copy()
+    from ..protocol.building import dispatch
+    aliases = {"change": "change_manufacture", "settle": "settle_manufacture"}
     try:
-        if action in {"assign", "assist"}:
-            user["troop"] = {"chars": player_data["troop"]["chars"].copy()}
-            engine = BuildingStaff(user, table, faketime())
-        else:
-            engine = Manufacture(user, table, faketime())
-        response = engine.sync() if action == "sync" else getattr(engine, action)(body)
+        return dispatch(player_data, aliases.get(action, action), body, faketime())
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    player_data["building"] = user["building"]
-    player_data["inventory"] = user["inventory"]
-    return response
 
 
 @router.post("/building/changeManufactureSolution")
@@ -199,3 +188,18 @@ async def building_changePresetName(player_data, request: Request):
 
     response = {}
     return response
+
+
+def _command_endpoint(action):
+    @player_data_decorator
+    async def endpoint(player_data, request: Request):
+        return _base_action(player_data, await request.json(), action)
+    return endpoint
+
+for _path, _action in {
+    "changeStrategy": "strategy", "deliveryOrder": "deliver", "deleteOrder": "delete_order",
+    "accelerateOrder": "accelerate_order", "accelerateSolution": "accelerate_manufacture",
+    "workshopSynthesis": "workshop", "upgradeSpecialization": "start_training",
+    "completeUpgradeSpecialization": "finish_training",
+}.items():
+    router.add_api_route("/building/" + _path, _command_endpoint(_action), methods=["POST"], name="building_" + _path)
