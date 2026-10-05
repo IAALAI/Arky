@@ -403,6 +403,7 @@ def test_five_floor_run_settles_once_without_map_loop(client):
     assert result["game"]["brief"]["success"] == 1
     assert len(result["game"]["score"]["detail"]) == 7
     assert all(len(row) == 2 for row in result["game"]["score"]["detail"])
+    assert result["game"]["score"]["accumulation"] == [0, 0]
     assert result["game"]["record"]["cntZone"] == 5
     assert current(client)["player"] is None
     assert post(client, "gameSettle")["game"] == result["game"]

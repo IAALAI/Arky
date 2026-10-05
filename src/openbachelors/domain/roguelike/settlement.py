@@ -75,7 +75,7 @@ def response(current, runtime, result):
         "buff": 0.0,
         "bp": deepcopy(zero),
         "gp": 0,
-        "accumulation": [],
+        "accumulation": [0, 0],  # Android GP view reads before / after totals.
     }
     challenge = None
     if runtime.get("challenge"):
