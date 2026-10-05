@@ -50,3 +50,6 @@ console = "openbachelors.tool.console:cli"
 link-updater = "openbachelors.tool.link_updater:main"
 res-locker = "openbachelors.tool.res_locker:main"
 version-updater = "openbachelors.tool.version_updater:main"
+
+[tool.pytest.ini_options]
+norecursedirs = ["test/client", ".git", ".venv"]

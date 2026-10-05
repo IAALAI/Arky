@@ -1431,8 +1431,8 @@ class Rlv2Theme6BasicManager(Rlv2BasicManager):
         return stage_buff_lst
 
 
-def get_rlv2_manager(player_data, request_json, response):
-    theme_id = player_data["rlv2"]["current"]["game"]["theme"]
+def get_legacy_rlv2_manager(player_data, request_json, response, theme_id=None):
+    theme_id = theme_id or player_data["rlv2"]["current"]["game"]["theme"]
     if theme_id == "rogue_1":
         return Rlv2Theme1BasicManager(player_data, theme_id, request_json, response)
     if theme_id == "rogue_2":
@@ -1446,6 +1446,28 @@ def get_rlv2_manager(player_data, request_json, response):
     return Rlv2BasicManager(player_data, theme_id, request_json, response)
 
 
+ENABLE_RULES = True
+
+
+def get_rlv2_manager(player_data, request_json, response, new_game=False):
+    from ..services.roguelike import RULE_THEMES
+    from ..protocol.roguelike import RulesManager
+
+    legacy = get_legacy_rlv2_manager(
+        player_data, request_json, response,
+        request_json["theme"] if new_game else None,
+    )
+    runtime = getattr(
+        getattr(player_data, "sav_delta_json", None), "server_state", {}
+    ).get("rogue", {})
+    if ENABLE_RULES and (
+        (new_game and legacy.theme_id in RULE_THEMES)
+        or (not new_game and runtime.get("version") == 1)
+    ):
+        return RulesManager(legacy)
+    return legacy
+
+
 @router.post("/rlv2/createGame")
 @player_data_decorator
 async def rlv2_createGame(player_data, request: Request):
@@ -1453,14 +1475,19 @@ async def rlv2_createGame(player_data, request: Request):
     response = {}
 
     mode = request_json["mode"]
-    if mode == "MONTH_TEAM" or mode == "CHALLENGE":
+    if mode == "MONTH_TEAM":
         return Response(status_code=404)
 
     theme_id = request_json["theme"]
-    player_data["rlv2"]["current"]["game"] = {"theme": theme_id}
-
-    rlv2_manager = get_rlv2_manager(player_data, request_json, response)
-
+    if theme_id not in const_json_loader[ROGUELIKE_TOPIC_TABLE]["details"]:
+        return Response(status_code=400)
+    if mode == "CHALLENGE" and theme_id != "rogue_3":
+        return Response(status_code=400)
+    player_data.sav_delta_json.server_state.pop("rogue", None)
+    from ..services.roguelike import RULE_THEMES
+    if not ENABLE_RULES or theme_id not in RULE_THEMES:
+        player_data["rlv2"]["current"]["game"] = {"theme": theme_id}
+    rlv2_manager = get_rlv2_manager(player_data, request_json, response, new_game=True)
     rlv2_manager.rlv2_createGame()
 
     return response
@@ -1660,4 +1687,29 @@ async def rlv2_gridZone_moveTo(player_data, request: Request):
 
     rlv2_manager.rlv2_gridZone_moveTo()
 
+    return response
+
+
+@router.post("/rlv2/chooseBattleReward")
+@player_data_decorator
+async def rlv2_chooseBattleReward(player_data, request: Request):
+    request_json = await request.json()
+    response = {}
+    manager = get_rlv2_manager(player_data, request_json, response)
+    manager.rlv2_chooseBattleReward()
+    return response
+
+
+@router.post("/rlv2/gameSettle")
+@player_data_decorator
+async def rlv2_gameSettle(player_data, request: Request):
+    from fastapi import HTTPException
+    runtime = player_data.sav_delta_json.server_state.get("rogue", {})
+    if runtime.get("settledAt"):
+        return deepcopy(runtime["settlement"])
+    if not runtime.get("settlement"):
+        raise HTTPException(400, "no run awaiting settlement")
+    response = {}
+    manager = get_rlv2_manager(player_data, await request.json(), response)
+    manager.rlv2_gameSettle()
     return response

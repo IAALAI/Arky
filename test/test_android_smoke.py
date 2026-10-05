@@ -16,7 +16,9 @@ from openbachelors.util.const_json_loader import const_json_loader
 from openbachelors.const.filepath import CONFIG_JSON
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    from openbachelors.bp import bp_rlv2
+    monkeypatch.setattr(bp_rlv2, "ENABLE_RULES", False)
     token = "android-smoke-" + uuid.uuid4().hex
     assert not const_json_loader[CONFIG_JSON]["use_db"]
     with TestClient(app, headers={"secret": token}) as c:

@@ -932,7 +932,10 @@ def recursive_flush_deleted_dict(
             elif isinstance(delta_json.modified_dict[key], dict) and key in overlay_json:
                 # An explicit delete followed by a dict assignment replaces that
                 # subtree. Merging it would resurrect template-owned operators.
-                deleted_keys.append(key)
+                # Replacing a scalar/null with a map needs a persistence reset,
+                # but no client deletion: it would erase the newly created model.
+                if isinstance(overlay_json[key], OverlayJson):
+                    deleted_keys.append(key)
                 del overlay_json[key]
             del delta_json.deleted_dict[key]
 
@@ -1218,8 +1221,10 @@ class PlayerData(OverlayJson, SavableThing):
         self.extra_save.reset()
 
     def reset_key(self, key):
-        if key=='building':
-            self.sav_delta_json.server_state.pop('base',None)
+        if key == 'building':
+            self.sav_delta_json.server_state.pop('base', None)
+        if key == 'rlv2':
+            self.sav_delta_json.server_state.pop('rogue', None)
         self.sav_delta_json.reset_key(key)
         self.sav_pending_delta_json.reset_key(key)
 

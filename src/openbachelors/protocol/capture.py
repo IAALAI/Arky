@@ -12,7 +12,7 @@ class BuildingTrace:
     async def __call__(self, scope, receive, send):
         if (
             scope["type"] != "http"
-            or not scope["path"].startswith("/building/")
+            or not scope["path"].startswith(("/building/", "/rlv2/"))
             or not Path("test/client/capture-building.enabled").exists()
         ):
             return await self.app(scope, receive, send)
@@ -40,10 +40,16 @@ class BuildingTrace:
                     payload = json.loads(body) if body else {}
                 except (ValueError, UnicodeError):
                     payload = {"invalid_body": True}
+                if not isinstance(payload, dict):
+                    payload = {"invalid_body": True}
                 record = {
                     "time": datetime.now(timezone.utc).isoformat(),
                     "path": scope["path"],
-                    "body": payload,
+                    "body": {
+                        k: v
+                        for k, v in payload.items()
+                        if k not in {"data", "battleLog", "battleData", "rlv2Data"}
+                    },
                     "status": message["status"],
                     "peer": scope.get("client", ("unknown",))[0],
                 }
