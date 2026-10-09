@@ -12,6 +12,10 @@ cd ~/player/Ark/server
 ./scripts/client-start.sh
 ```
 
+客户端接入需要 `tools/android` 的可重建调试层。首次运行先按
+[Android 调试说明](tools/android/README.md) 构建 bundle 并安装调试依赖。
+启动器核对原始 APK、客户端版本和资源清单；客户端和资源应保持 2.7.71 配对。
+
 - `arknights.service`：以 iaalai 运行一个 Uvicorn worker，监听 127.0.0.1:18443。
 - Nginx：以原有受信任证书接入 80/443，仅放行本机和 Waydroid 网段。
 - `client/hosts`：游戏与账号域名映射到 Waydroid 网关 192.168.240.1，CDN 保持原地址。

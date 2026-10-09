@@ -189,3 +189,7 @@ pyrightconfig.json
 /test/runtime/
 
 /test/client/
+
+# Android debug bundle is built from the pinned tool dependencies.
+/tools/android/node_modules/
+/tools/android/hooks.bundle.js

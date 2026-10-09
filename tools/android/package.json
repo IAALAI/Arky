@@ -1,0 +1,11 @@
+{
+  "name": "arky-android-debug",
+  "private": true,
+  "type": "module",
+  "scripts": {"build": "frida-compile hooks.js -o hooks.bundle.js"},
+  "dependencies": {
+    "frida-il2cpp-bridge": "0.14.0",
+    "frida-java-bridge": "7.0.13"
+  },
+  "devDependencies": {"frida-compile": "19.1.0"}
+}
