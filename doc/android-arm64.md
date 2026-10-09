@@ -11,7 +11,7 @@ https://github.com/pfyy/OpenBachelorS/tree/cbe89d7baff166fd339bebae19f19b9cebcfd
 Android 客户端目标 2.7.71，资源版本 26-09-22-07-47-20_6c71fa，funcVer V070。
 这表示已核实的社区源码版本，不表示已核实官方当天最新版本。
 Windows 社区包的 Nuitka EXE 仅用于资料对照，没有作为 ARM 服务运行。
-未发布或推送该源码副本；上游快照未发现 LICENSE 文件，发布前需确认授权。
+2026-10-09 将已验证的主服务发布到 IAALAI/Arky，提交说明为 `2.7.71 v261009`。卫戍协议的未完成实验保留在 spark 工作区，本次发布使用 2.7.71 稳定配置。
 
 ## 2026-10-05 Waydroid 接入
 

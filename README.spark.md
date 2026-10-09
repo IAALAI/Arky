@@ -2,6 +2,7 @@
 
 主入口：`~/player/Ark/server`。真实源码在 `newVersion/native`。
 当前目标客户端 Android 2.7.71（ARM64），资源 26-09-22-07-47-20_6c71fa。
+源码发布版本：`2.7.71 v261009`，仓库 [IAALAI/Arky](https://github.com/IAALAI/Arky)。
 
 ```sh
 cd ~/player/Ark/server
@@ -27,10 +28,10 @@ cd ~/player/Ark/server
 旧端和所有 Git 改动完整保存在 `~/player/Ark/archive/2026-10-05-before-native/`。
 不要删除归档，旧证书及 APK 可用于回退。
 
-肉鸽仍是沙盒规则；基建目前支持进驻、助理和基础制造，其余规则尚未齐全。
-详细实现和边界见 [ARM 接入记录](doc/android-arm64.md)。
+基建已补充贸易、制造、加工、专精训练、心情及离线结算；第三、第六肉鸽主题已加入本地地图、事件、藏品和结算规则。
+详细实现和边界见 [基建记录](BASE_IMPLEMENTATION.md)、[肉鸽记录](ROGUELIKE_IMPLEMENTATION.md)及 [ARM 接入记录](doc/android-arm64.md)。卫戍协议暂缓。
 已通过真实客户端第六主题“猎犬病原”实战、结算和重启恢复；制造站进驻及生产倒计时也已验证。
-验收报告在 `../reports/WAYDROID.md`，截图在忽略的 `test/client/`；47 项回归用例通过。
+实机验收报告在 spark 的 `../reports/WAYDROID.md`，截图在忽略的 `test/client/`；本次稳定版本发布前 87 项回归用例通过。
 
 部署配置的可审查副本在 `deploy/`，不含私钥。
 日志：`journalctl -u arknights.service`；

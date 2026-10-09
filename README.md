@@ -1,23 +1,33 @@
-> spark 安卓环境请先阅读 [README.spark.md](README.spark.md)。本目录是唯一主服务，旧端已归档。
+# Arky
 
-# OpenBachelorS
+明日方舟本地服务端，面向 ARM64 Linux / Waydroid 安卓客户端。当前发布版本：**2.7.71 v261009**，配套资源版本 `26-09-22-07-47-20_6c71fa`。
 
-OpenBachelor Server. For PvZ Online.
+基于 [OpenBachelorS cbe89d7](https://github.com/pfyy/OpenBachelorS/tree/cbe89d7baff166fd339bebae19f19b9cebcfd580) 扩展。主要源码在 `src/openbachelors/`，部署配置在 `deploy/`，启动及旧 Java 存档迁移工具在 `scripts/`。
 
-This project is a game server only. If you are looking for a game launcher, please look at OpenBachelor Client.
+本次包含基建贸易、制造、加工、专精训练、心情与离线结算，以及第三、第六肉鸽主题的地图、事件、藏品、招募、战斗领奖和结束探索规则。基建和肉鸽新增业务采用协议、服务、领域规则、存档适配分层；完整玩法覆盖范围见实现文档。卫戍协议暂缓，不包含尚未完成的实验模块。
 
-## How-To
+## 启动
 
-### 1. Setup Server
+使用 Python 3.12，在仓库根目录执行：
 
-1. Install Python 3.12 and add `python.exe` to path.
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements.arm64.lock
+./scripts/start-native.sh
+```
 
-2. Run `setup.cmd`.
+服务以单个 worker 监听 `127.0.0.1:18443`。根据设备修改 `conf/config.json`；Waydroid 的域名映射、Nginx 80/443 入口及 systemd 部署见 [spark 部署说明](README.spark.md)。账号沿用本地信任模式，使用手机号标识存档。
 
-### 2. Run Server
+## 验证与实现记录
 
-1. Run `start-dev.cmd`.
+```sh
+PYTHONPATH=src .venv/bin/python -m pytest -q
+```
 
-### 3. Start Game
+发布前在 spark ARM64 的独立稳定版本目录运行，87 项测试通过。Android 2.7.71 的真实客户端验证和剩余功能范围见：
 
-1. Use a game launcher to start the game, preferably OpenBachelor Client.
+- [基建实现与实机验证](BASE_IMPLEMENTATION.md)
+- [肉鸽实现与实机验证](ROGUELIKE_IMPLEMENTATION.md)
+- [Android ARM64 接入记录](doc/android-arm64.md)
+
+`multi_sav/`、APK、资源包、调试日志、私钥和本地虚拟环境不随源码发布。上游版本与资源更新工作流改为手动触发，以保留当前验证过的客户端与资源配对。

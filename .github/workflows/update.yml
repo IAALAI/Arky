@@ -1,9 +1,6 @@
+# Keep the verified Android client/resource pair until an explicit update.
 on:
-  schedule:
-    - cron: "53 20,8 * * *"
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   update:
