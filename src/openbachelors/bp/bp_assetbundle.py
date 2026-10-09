@@ -157,8 +157,8 @@ async def download_asset(res_version, asset_filename, platform_name):
             ):
                 return DownloadAssetResult.Redirect(url=url)
 
-            client = get_httpx_client()
-            req = await client.head(url)
+            async with get_httpx_client() as client:
+                req = await client.head(url)
 
             if req.status_code != 200:
                 return DownloadAssetResult.HttpStatusCode(status_code=404)

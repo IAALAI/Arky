@@ -224,23 +224,33 @@ async def download_file(url: str, filename: str, dirpath: str):
     tmp_filename = str(uuid4())
 
     try:
-        proc = await asyncio.to_thread(
-            lambda: subprocess.run(
-                [
-                    "aria2c",
-                    "-q",
-                    "-d",
-                    TMP_DIRPATH,
-                    "-o",
-                    tmp_filename,
-                    "--auto-file-renaming=false",
-                    url,
-                ]
+        try:
+            proc = await asyncio.to_thread(
+                lambda: subprocess.run(
+                    [
+                        "aria2c",
+                        "-q",
+                        "-d",
+                        TMP_DIRPATH,
+                        "-o",
+                        tmp_filename,
+                        "--auto-file-renaming=false",
+                        url,
+                    ]
+                )
             )
-        )
-
-        if proc.returncode:
-            raise ConnectionError(f"download_file: file {filename} failed")
+        except FileNotFoundError:
+            # Minimal Linux deployments may not have the optional aria2 tool.
+            # Stream into the temporary file so a failed fetch is never cached.
+            async with httpx.AsyncClient(follow_redirects=True, timeout=60) as client:
+                async with client.stream("GET", url) as response:
+                    response.raise_for_status()
+                    async with aiofiles.open(os.path.join(TMP_DIRPATH, tmp_filename), "wb") as handle:
+                        async for chunk in response.aiter_bytes():
+                            await handle.write(chunk)
+        else:
+            if proc.returncode:
+                raise ConnectionError(f"download_file: file {filename} failed")
 
         os.makedirs(dirpath, exist_ok=True)
 
