@@ -104,4 +104,8 @@ def dispatch(player, action, payload, now):
         if len(slots) != 1:
             raise ValueError("A unique room is required")
         body["roomSlotId"] = slots[0]
-    return execute_base(player, action, body, now)
+    result = execute_base(player, action, body, now)
+    if action == "deliver_batch":
+        # Android BuildingDeliveryBatchOrderResponse consumes rewards by room.
+        return {"delivered": result["deliveries"]}
+    return result

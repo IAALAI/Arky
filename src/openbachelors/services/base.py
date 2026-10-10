@@ -137,8 +137,9 @@ class BaseService:
         # Validate every room before settling any order. The repository commits
         # materials, rewards and removed orders together after this command.
         rooms = [self.state.room(sid, "TRADING")[1] for sid in slots]
-        rewards = {}
+        deliveries = {}
         for sid, room in zip(slots, rooms):
+            rewards = {}
             for order in list(room["stock"]):
                 # The Android shortcut delivers only currently affordable
                 # orders; other orders stay available for later production.
@@ -153,7 +154,8 @@ class BaseService:
                     if key not in rewards:
                         rewards[key] = dict(item, count=0)
                     rewards[key]["count"] += item["count"]
-        return {"items": list(rewards.values())}
+            deliveries[sid] = list(rewards.values())
+        return {"deliveries": deliveries}
 
     def accelerate(self, body, kind):
         slot_id = body["roomSlotId"]

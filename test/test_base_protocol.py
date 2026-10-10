@@ -194,14 +194,19 @@ def test_android_batch_delivery_shares_materials_and_never_repays_orders(client)
     seed_batch_orders(client)
     body = {"slotList": ["slot_6", "slot_7"]}
     result = post(client, "/building/deliveryBatchOrder", body)
-    assert result["items"] == [{"id": "4001", "count": 2500, "type": "GOLD"}]
+    assert result["delivered"] == {
+        "slot_6": [{"id": "4001", "count": 1500, "type": "GOLD"}],
+        "slot_7": [{"id": "4001", "count": 1000, "type": "GOLD"}],
+    }
     user = post(client, "/account/syncData")["user"]
     assert user["inventory"]["3003"] == 0
     assert user["status"]["gold"] == 2500
     rooms = user["building"]["rooms"]["TRADING"]
     assert [o["instId"] for o in rooms["slot_6"]["stock"]] == [102]
     assert rooms["slot_7"]["stock"] == []
-    assert post(client, "/building/deliveryBatchOrder", body)["items"] == []
+    assert post(client, "/building/deliveryBatchOrder", body)["delivered"] == {
+        "slot_6": [], "slot_7": [],
+    }
     assert post(client, "/account/syncData")["user"]["status"]["gold"] == 2500
 
 
