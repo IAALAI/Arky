@@ -46,6 +46,10 @@ class Order(Slot):
         return value
 
 
+class BatchOrder(Command):
+    slotList: list[str]
+
+
 class Accelerate(Slot):
     orderId: int | None = None
     count: int = Field(validation_alias=AliasChoices("count", "laborCount", "cost"))
@@ -74,6 +78,7 @@ COMMANDS = {
     "settle_manufacture": ManufactureSettle,
     "strategy": Strategy,
     "deliver": Order,
+    "deliver_batch": BatchOrder,
     "delete_order": Order,
     "accelerate_manufacture": Accelerate,
     "accelerate_order": Accelerate,

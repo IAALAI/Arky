@@ -166,3 +166,50 @@ def test_android_drone_order_identity_and_delivery_wire(client):
     user = post(client, "/account/syncData")["user"]
     assert user["inventory"]["3003"] == 0
     assert user["status"]["gold"] == 500 * count
+
+
+def seed_batch_orders(client):
+    post(client, "/account/syncData")
+
+    async def seed():
+        player = await PlayerData.create(player_id=client.token)
+        player["inventory"]["3003"] = 5
+        player["status"]["gold"] = 0
+        for sid, orders in (("slot_6", [(101, 3), (102, 4)]), ("slot_7", [(201, 2)])):
+            room = player["building"]["rooms"]["TRADING"][sid].copy()
+            room["stock"] = [
+                {"instId": ident, "type": "O_GOLD",
+                 "delivery": [{"id": "3003", "count": count, "type": "MATERIAL"}],
+                 "gain": {"id": "4001", "count": count * 500, "type": "GOLD"}}
+                for ident, count in orders
+            ]
+            player["building"]["rooms"]["TRADING"][sid] = room
+        player.build_delta_response()
+        await player.save()
+
+    asyncio.run(seed())
+
+
+def test_android_batch_delivery_shares_materials_and_never_repays_orders(client):
+    seed_batch_orders(client)
+    body = {"slotList": ["slot_6", "slot_7"]}
+    result = post(client, "/building/deliveryBatchOrder", body)
+    assert result["items"] == [{"id": "4001", "count": 2500, "type": "GOLD"}]
+    user = post(client, "/account/syncData")["user"]
+    assert user["inventory"]["3003"] == 0
+    assert user["status"]["gold"] == 2500
+    rooms = user["building"]["rooms"]["TRADING"]
+    assert [o["instId"] for o in rooms["slot_6"]["stock"]] == [102]
+    assert rooms["slot_7"]["stock"] == []
+    assert post(client, "/building/deliveryBatchOrder", body)["items"] == []
+    assert post(client, "/account/syncData")["user"]["status"]["gold"] == 2500
+
+
+@pytest.mark.parametrize("slots", [[], ["slot_6", "slot_6"], ["slot_6", "missing"],
+                                    ["slot_6", "slot_16"], ["slot_6", 7]])
+def test_batch_delivery_invalid_rooms_leave_save_unchanged(client, slots):
+    seed_batch_orders(client)
+    file = Path("multi_sav") / client.token / "delta.json"
+    before = file.read_bytes()
+    assert client.post("/building/deliveryBatchOrder", json={"slotList": slots}).status_code == 400
+    assert file.read_bytes() == before

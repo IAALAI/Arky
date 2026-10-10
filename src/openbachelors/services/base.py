@@ -130,6 +130,31 @@ class BaseService:
         room["stock"][:] = [o for o in room["stock"] if o["instId"] != body["orderId"]]
         return {}
 
+    def deliver_batch(self, body):
+        slots = body["slotList"]
+        if not slots or len(set(slots)) != len(slots):
+            raise RuleError("Invalid room list")
+        # Validate every room before settling any order. The repository commits
+        # materials, rewards and removed orders together after this command.
+        rooms = [self.state.room(sid, "TRADING")[1] for sid in slots]
+        rewards = {}
+        for sid, room in zip(slots, rooms):
+            for order in list(room["stock"]):
+                # The Android shortcut delivers only currently affordable
+                # orders; other orders stay available for later production.
+                costs = {}
+                for item in order["delivery"]:
+                    costs[item["id"]] = costs.get(item["id"], 0) + item["count"]
+                if any(self.stock.count(key) < count for key, count in costs.items()):
+                    continue
+                result = self.deliver({"roomSlotId": sid, "orderId": order["instId"]})
+                for item in result["items"]:
+                    key = (item["id"], item["type"])
+                    if key not in rewards:
+                        rewards[key] = dict(item, count=0)
+                    rewards[key]["count"] += item["count"]
+        return {"items": list(rewards.values())}
+
     def accelerate(self, body, kind):
         slot_id = body["roomSlotId"]
         _, room = self.state.room(slot_id, kind)

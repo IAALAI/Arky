@@ -197,7 +197,8 @@ def _command_endpoint(action):
     return endpoint
 
 for _path, _action in {
-    "changeStrategy": "strategy", "deliveryOrder": "deliver", "deleteOrder": "delete_order",
+    "changeStrategy": "strategy", "deliveryOrder": "deliver",
+    "deliveryBatchOrder": "deliver_batch", "deleteOrder": "delete_order",
     "accelerateOrder": "accelerate_order", "accelerateSolution": "accelerate_manufacture",
     "workshopSynthesis": "workshop", "upgradeSpecialization": "start_training",
     "completeUpgradeSpecialization": "finish_training",
