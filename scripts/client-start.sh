@@ -7,7 +7,7 @@ export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
 export WAYLAND_DISPLAY=wayland-arka
 sudo -v
-sudo systemctl start arknights.service nginx
+sudo systemctl start arknights.service nginx waydroid-container.service
 if ! pgrep -f '^weston .*--socket=wayland-arka( |$)' >/dev/null; then
   nohup weston --backend=headless-backend.so --socket=wayland-arka --idle-time=0 \
     --width=1280 --height=720 --config="$ARK_ROOT/client/weston.ini" \
@@ -16,7 +16,12 @@ if ! pgrep -f '^weston .*--socket=wayland-arka( |$)' >/dev/null; then
 fi
 if ! waydroid status | grep -q 'Wayland display:.*wayland-arka'; then
   waydroid session stop || true
-  nohup waydroid session start > "$ARK_ROOT/newVersion/reports/waydroid-session.log" 2>&1 </dev/null &
+  systemctl --user stop arky-waydroid-session.service 2>/dev/null || true
+  systemctl --user reset-failed arky-waydroid-session.service 2>/dev/null || true
+  systemd-run --user --collect --unit=arky-waydroid-session --property=Restart=on-failure \
+    --setenv="XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" \
+    --setenv="DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" \
+    --setenv="WAYLAND_DISPLAY=$WAYLAND_DISPLAY" /usr/bin/waydroid session start
 fi
 for attempt in $(seq 1 60); do
   if sudo waydroid shell -- getprop sys.boot_completed 2>/dev/null | tr -d '\r' | grep -qx 1; then
@@ -29,6 +34,7 @@ sudo waydroid shell -- setprop persist.waydroid.suspend false
 sudo waydroid shell -- setprop service.adb.tcp.port 5555
 sudo waydroid shell -- stop adbd
 sudo waydroid shell -- start adbd
+sudo waydroid shell -- sh -c 'pidof frida-server >/dev/null || /data/local/tmp/frida-server -D'
 guest_ip="$(waydroid status | awk '/IP address:/ {print $3}')"
 adb connect "$guest_ip:5555"
 debug_log="$SERVER_ROOT/test/client/android-debug.log"

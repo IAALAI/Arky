@@ -21,7 +21,17 @@ cd ~/player/Ark/server
 - Nginx：以原有受信任证书接入 80/443，仅放行本机和 Waydroid 网段。
 - `client/hosts`：游戏与账号域名映射到 Waydroid 网关 192.168.240.1，CDN 保持原地址。
 - 客户端在 `wayland-arka` Weston 调试会话运行，1280×720。ADB 可截图、点击及获取日志。
+- 该显示会话使用 headless 后端，因此正常运行也不会自动在 GNOME 桌面出现窗口。启动脚本通过用户服务保持新会话运行，避免 SSH 退出时停止；容器重启后也会重新启动既有的 Waydroid Frida helper。
 - 不需要 Windows 程序、Wine 或其他指令集兼容层。
+
+在 spark 的图形桌面终端查看和操作实时画面：
+
+```sh
+cd ~/player/Ark/newVersion/release-v261009
+/usr/bin/python3 scripts/waydroid-view.py
+```
+
+窗口标题为“Arky - Waydroid 实时画面”。使用系统 Python 的 GTK 3 / GdkPixbuf 支持和 ADB 读取新画面，适用于此镜像没有可用 AVC 视频编码器、scrcpy 无法投屏的情况。刷新率较低，鼠标支持点击和拖动；关闭窗口不停止游戏。状态栏显示最新帧的北京时间，断线时明确提示显示的是旧画面。它默认只连接 Waydroid 的 `192.168.240.112:5555`。
 
 帐号为本地信任模式，手机号作为保存标识。已迁移旧端两个已初始化账号。
 新账号沿用上游解锁模板。原 Java 密码认证尚未接回，不能把该服务开放到公网。
