@@ -37,6 +37,7 @@ sudo waydroid shell -- start adbd
 sudo waydroid shell -- sh -c 'pidof frida-server >/dev/null || /data/local/tmp/frida-server -D'
 guest_ip="$(waydroid status | awk '/IP address:/ {print $3}')"
 adb connect "$guest_ip:5555"
+timeout 30 adb -s "$guest_ip:5555" wait-for-device
 debug_log="$SERVER_ROOT/test/client/android-debug.log"
 mkdir -p "$(dirname "$debug_log")"
 if [[ -f "$SERVER_ROOT/test/client/android-debug.pid" ]]; then
